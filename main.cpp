@@ -60,8 +60,8 @@ int main (int argc, const char** argv)
   std::string inputdir;
   if(opt.get("-r").isSet){opt.get("-r").get(inputdir);}
   //判断参数是否设置：
-  short svalue;
-  double dvalue;
+  short svalue = 0;
+  double dvalue = 0;
   bool bset = false,cset = false;
   if(opt.get("-s").isSet){
     opt.get("-s").get(svalue);
