@@ -16,7 +16,7 @@ v0.2.3 20150403 Remove ezOptionValidator,set validate function in OptionGroup.
                 Support vc6,Clipping volume
 v0.2.4 20151108 Add directory type Support
                 Add some annotation
-v0.2.4 20151108 Change option parse function 
+v0.2.5 20151115 Change option parse function 
 */
 #ifndef EZ_OPTION_PARSER_H
 #define EZ_OPTION_PARSER_H
