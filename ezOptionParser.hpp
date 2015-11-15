@@ -16,6 +16,7 @@ v0.2.3 20150403 Remove ezOptionValidator,set validate function in OptionGroup.
                 Support vc6,Clipping volume
 v0.2.4 20151108 Add directory type Support
                 Add some annotation
+v0.2.4 20151108 Change option parse function 
 */
 #ifndef EZ_OPTION_PARSER_H
 #define EZ_OPTION_PARSER_H
@@ -28,6 +29,7 @@ v0.2.4 20151108 Add directory type Support
 #include <string>
 #include <algorithm>
 #include <limits>
+#include <iostream>
 #include <sstream>
 #include <fstream>
 #include <sys/types.h>
@@ -36,7 +38,6 @@ v0.2.4 20151108 Add directory type Support
 #include <stdlib.h>
 namespace ez
 {
-#define DEBUGLINE() printf("%s:%d\n", __FILE__, __LINE__);
   enum EZ_TYPE { EZ_NOTYPE = 0, EZ_BOOL, EZ_INT8, EZ_UINT8, EZ_INT16, EZ_UINT16, EZ_INT32, EZ_UINT32, EZ_INT64, EZ_UINT64, EZ_FLOAT, EZ_DOUBLE, EZ_TEXT, EZ_FILE,EZ_DIR };
   static const std::string EZ_TYPE_NAME[] = {"NOTYPE", "bool", "char", "unsigned char", "short", "unsigned short", "int", "unsigned int", "long", "unsigned long", "float", "double", "string", "file","directory"};
   static const char delim = ',';
@@ -631,10 +632,11 @@ namespace ez
     /**
     * @brief 解析参数,直接将argc argv传入
     */
-    inline void parse (int argc, const char * const * argv)
+    inline bool parse (int argc, const char * const * argv)
     {
       if (argc < 1) {
-        return;
+        std::cout<<"Invalid optoin number"<<std::endl;
+        return false;
       }
 
       std::vector<std::string> args;
@@ -668,7 +670,7 @@ namespace ez
                 ++i;
 
                 if (i >= (int)args.size()) {
-                  return;
+                  break;
                 }
 
                 std::vector<std::string> argOptions;
@@ -689,7 +691,7 @@ namespace ez
               ++i;
 
               if (i >= (int)args.size()) {
-                return;
+                break;
               }
 
               std::vector<std::string> argOptions;
@@ -718,7 +720,20 @@ namespace ez
           }
         }
       }
+      if(isSet("-h")){
+        std::cout<<getUsage()<<std::endl;
+        return false;
+      }
+      std::string out;
+      if (!checkValid(out)) {
+        std::cout << out<<std::endl;
+        return false;
+      }
+      //显示警告
+      std::cout<<out<<std::endl;
+      return true;
     };
+
     /**
     * @brief 检查输入参数格式是否正确
     * @param out 输出提示信息
