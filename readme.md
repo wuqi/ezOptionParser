@@ -27,46 +27,55 @@
 然后使用add函数，添加option(选项)，函数说明如下:
 
 ```cpp
-    /**
-    * @brief 添加参数
-    * @param defaults 默认值
-    * @param required 是否必须填写
-    * @param expectArgs 期望传入参数数量(0表示不带,-1表示任意多个,1表示一个,2表示两个,以此类推,用逗号分隔)
-    * @param help 帮助信息,最终显示在help中
-    * @param flags 参数标识,可有多个,get时使用,用逗号分隔,没有带-或者--的,作为无标签的参数,传入时不需要带前导符,比如input,可以直接写"input",传的时候直接传文件名
-    * @param optType 参数类型
-    * @param minValue 最小值,若不需要则为""
-    * @param maxValue 最大值,若不需要则为""
-    * @param validListStr 有效值列表,设置后最大最小值无效,用逗号分隔,可以是数字或者单词,不需要则不指定或为""
-    */
-    inline void add (const char* defaults, bool required, \
-                    int expectArgs, const char* help, const char* flags, \
-                    EZ_TYPE optType = EZ_NOTYPE, \
-                    const std::string& minValue = std::string(), \
-                    const std::string& maxValue = std::string(), \
-                    const  char* validListStr = "")
+  /**
+  * @brief 添加参数
+  * @param flags 参数标识,可有多个,get时使用,用逗号分隔
+                 没有带-或者--的,作为无标签的参数
+                 传入时不需要带前导符,比如input,可以直接写"input",传的时候直接传文件名
+  * @param required 是否必须填写
+  * @param optType 参数类型
+  * @param expectArgs 期望传入数量
+                      0表示不带参数,
+                      -1表示任意多个,
+                      1表示一个,2表示两个,以此类推
+                      参数紧跟标志后，用逗号分隔)
+  * @param help 帮助信息,最终显示在help中
+  * @param defaults 默认值
+  * @param minValue 最小值,若不需要则为""
+  * @param maxValue 最大值,若不需要则为""
+  * @param validListStr 有效值列表,设置后最大最小值无效,用逗号分隔,可以是数字或者单词,不需要则不指定或为""
+  */
+  inline void add( const char *flags,
+                   bool required = true,
+                   int expectArgs = 1, 
+                   const char *help = "", 
+                   EZ_TYPE optType = EZ_NOTYPE,
+                   const char *defaults = "",
+                   const std::string &minValue = std::string(),
+                   const std::string &maxValue = std::string(),
+                   const  char *validListStr = "" )
 ```
 
   选项类型有以下几类:
   
 * 简单无参选项，例如 `cli -b` ,多个无参选项可以像bash命令一样叠加使用,如  `cli -bc` 等同于 `cli -b -c`
 ```cpp
-  opt.add("",false,0,"test combined arguments","-b");
-  opt.add("",false,0,"test combined arguments","-c");
+  opt.add ("-b", false, 0, "test combined arguments");
+  opt.add ("-c", false, 0, "test combined arguments");
 ```
 
 * 普通选项，例如 `cli -s 100`,普通选项中参数个数必须指定,使用`-1`可表示跟多于一个的任意个参数，例如`cli -s 100,200,300,400`
 ```cpp
   /**带两个double类型参数的选项,默认值为77,89的参数,非必须指定,值范围为10-100*/
-  opt.add ("77,89",false,2,"Test range valid: range:10-100","-d,--double",ez::EZ_DOUBLE,"10.0","100.0");
+  opt.add("-d,--double",false ,2, "Test range valid: range:10-100" ,ez::EZ_DOUBLE,"77,89","10.0", "100.0");
   /**带一个text类型参数的选项,默认值为`modis`的参数,非必须指定,值为modis或者fy3a*/
-  opt.add ("modis", false, 1,"Input file type,modis or fy3a, default is modis.","-t,--type",ez::EZ_TEXT,"","","modis,fy3a");
+  opt.add("-t,--type",false,2, "Input file type,modis or fy3a, default is modis.",ez::EZ_TEXT,"modis","", "", "modis,fy3a");
 ```
 
 * 不带flag的选项，在设置flags时，不带前导的`-`即为不带flag的选项，例如有些只需要输入，输出的选项，不带flag的参数必须按照添加的顺序传入
 ```cpp
   /**一个输出选项，不需要带flag，*/
-  opt.add ("",true,1,"Output file argument.","output",ez::EZ_TEXT);
+  opt.add ("output", true, 1, "Output file argument." );
 ```
 
 ###指定互斥选项(可选)
