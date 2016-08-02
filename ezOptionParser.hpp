@@ -116,6 +116,32 @@ public:
   * @brief 获取参数
   * @param out 输出参数值
   */
+  inline void get( std::string &out )
+  {
+    std::stringstream ss;
+
+    if( !isSet ) {
+      if( defaults.empty() ) {
+        ss << "";
+        ss >> out;
+      } else {
+        ss << defaults;
+        ss >> out;
+      }
+    } else {
+      if( args.empty() || args[0].empty() ) {
+        ss << "";
+        ss >> out;
+      } else {
+        ss << args[0].at( 0 );
+        out = ss.str();
+      }
+    }
+  };
+  /**
+  * @brief 获取参数
+  * @param out 输出参数值
+  */
   template <typename T>
   inline void get( T &out )
   {
