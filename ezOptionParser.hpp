@@ -19,6 +19,7 @@ v0.2.4 20151108 Add directory type Support
 v0.2.5 20151115 Change option parse function
 v0.2.6 20151117 XorGroup implement
                 Format and check code
+v0.2.7 20160803 Edit get function ,to get the space in the string(file path)
 */
 #ifndef EZ_OPTION_PARSER_H
 #define EZ_OPTION_PARSER_H
