@@ -20,6 +20,7 @@ v0.2.5 20151115 Change option parse function
 v0.2.6 20151117 XorGroup implement
                 Format and check code
 v0.2.7 20160803 Edit get function ,to get the space in the string(file path)
+v0.2.8 20170816 Windows min max marco problem 
 */
 #ifndef EZ_OPTION_PARSER_H
 #define EZ_OPTION_PARSER_H
@@ -378,7 +379,7 @@ private:
         ss.str( "" );
         ss.clear();
       } else {
-        mint = std::numeric_limits<T>::min();
+        mint = (std::numeric_limits<T>::min)();
       }
 
       if( !maxValue.empty() ) {
@@ -387,7 +388,7 @@ private:
         ss.str( "" );
         ss.clear();
       } else {
-        maxt = std::numeric_limits<T>::max();
+        maxt = (std::numeric_limits<T>::max)();
       }
 
       double min, max;
