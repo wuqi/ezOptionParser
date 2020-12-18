@@ -20,7 +20,8 @@ v0.2.5 20151115 Change option parse function
 v0.2.6 20151117 XorGroup implement
                 Format and check code
 v0.2.7 20160803 Edit get function ,to get the space in the string(file path)
-v0.2.8 20170816 Windows min max marco problem 
+v0.2.8 20170816 Windows min max marco problem
+v0.2.9 20201218 Add needSplit option for some complex string
 */
 #ifndef EZ_OPTION_PARSER_H
 #define EZ_OPTION_PARSER_H
@@ -114,6 +115,7 @@ public:
   EZ_TYPE optType;  /** @brief 参数类型  */
   bool isUnlabeled;  /** @brief 是否为无标签参数(如input,output等不带前导符的参数)  */
   int groupID;
+  bool needSplit;
   /**
   * @brief 获取参数
   * @param out 输出参数值
@@ -463,6 +465,7 @@ public:
   * @param minValue 最小值,若不需要则为""
   * @param maxValue 最大值,若不需要则为""
   * @param validListStr 有效值列表,设置后最大最小值无效,用逗号分隔,可以是数字或者单词,不需要则不指定或为""
+  * @param needSplit text是否需要根据逗号分隔,一般需要分割,如果传入wkt等完整子串则设置为false
   */
   inline void add( const char *flags,
                    bool required = true,
@@ -472,7 +475,8 @@ public:
                    const char *defaults = "",
                    const std::string &minValue = std::string(),
                    const std::string &maxValue = std::string(),
-                   const  char *validListStr = "" )
+                   const  char *validListStr = "",
+                   bool needSplit = true)
   {
     int id = this->groups.size();
     OptionGroup g;
@@ -480,6 +484,7 @@ public:
     g.isRequired = required;
     g.expectArgs = expectArgs;
     g.isSet = 0;
+    g.needSplit = needSplit;
 
     if( optType != EZ_NOTYPE ) {
       g.help.append( "[" ).append( EZ_TYPE_NAME[optType] ).append( "]" );
@@ -731,7 +736,12 @@ public:
               }
 
               std::vector<std::string> argOptions;
-              SplitDelim( args[i], delim, argOptions );
+              if(groups[Id].needSplit)
+                SplitDelim( args[i], delim, argOptions );
+              else
+              {
+                argOptions.push_back(args[i]);
+              }
               groups[Id].args.push_back( argOptions );
             }
           } else if( std::find( unknownOptions.begin(), \
