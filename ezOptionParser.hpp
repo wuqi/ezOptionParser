@@ -1,4 +1,4 @@
-/*
+﻿/*
 This file is part of ezOptionParser. See MIT-LICENSE.
 Copyright (C) 2011,2012,2014 Remik Ziemlinski <first d0t surname att gmail>
 CHANGELOG
@@ -22,6 +22,7 @@ v0.2.6 20151117 XorGroup implement
 v0.2.7 20160803 Edit get function ,to get the space in the string(file path)
 v0.2.8 20170816 Windows min max marco problem
 v0.2.9 20201218 Add needSplit option for some complex string
+v0.3.0 20210421 Export Error Info
 */
 #ifndef EZ_OPTION_PARSER_H
 #define EZ_OPTION_PARSER_H
@@ -797,15 +798,13 @@ public:
       return false;
     }
 
-    std::string out;
-
-    if( !checkValid( out ) ) {
-      std::cout << out << std::endl;
+    if( !checkValid( this->errors ) ) {
+      std::cout << this->errors << std::endl;
       return false;
     }
 
     //显示警告
-    std::cout << out << std::endl;
+    std::cout << this->errors << std::endl;
     return true;
   };
 
@@ -905,6 +904,15 @@ public:
 
     return isValid;
   };
+  /**
+  * @brief 获取错误信息
+  * @param out 输出错误信息
+  * @return 错误信息
+  */
+  inline std::string getError()
+  {
+    return this->errors;
+  };
   /*description*/
   std::string overview;  /** @brief 命令行工具作用简要说明  */
   /** @brief 命令行语法（可自动生成，如无必要可不比改）  */
@@ -924,6 +932,7 @@ private:
   int xorGroupNum;  /** @brief xorGroup 总数  */
   /** @brief 无标签参数组名称位置对应表  */
   std::map<int, std::string> unlabeledPos;
+  std::string errors;  /** @brief 解析错误信息  */
 };
 }
 /* ################################################################### */
