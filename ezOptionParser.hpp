@@ -23,6 +23,7 @@ v0.2.7 20160803 Edit get function ,to get the space in the string(file path)
 v0.2.8 20170816 Windows min max marco problem
 v0.2.9 20201218 Add needSplit option for some complex string
 v0.3.0 20210421 Export Error Info
+v0.3.1 20220228 Change split text to equal 1(maybe -1),change CheckFileExistence method
 */
 #ifndef EZ_OPTION_PARSER_H
 #define EZ_OPTION_PARSER_H
@@ -44,9 +45,10 @@ v0.3.0 20210421 Export Error Info
 #include <stdlib.h>
 namespace ez
 {
-enum EZ_TYPE { EZ_NOTYPE = 0, EZ_BOOL, EZ_INT8, EZ_UINT8, EZ_INT16, EZ_UINT16, EZ_INT32, EZ_UINT32, EZ_INT64, EZ_UINT64, EZ_FLOAT, EZ_DOUBLE, EZ_TEXT, EZ_FILE, EZ_DIR };
-static const std::string EZ_TYPE_NAME[] = {"NOTYPE", "bool", "char", "unsigned char", "short", "unsigned short", "int", "unsigned int", "long", "unsigned long", "float", "double", "string", "file", "directory"};
+  enum EZ_TYPE { EZ_NOTYPE = 0, EZ_BOOL, EZ_INT8, EZ_UINT8, EZ_INT16, EZ_UINT16, EZ_INT32, EZ_UINT32, EZ_INT64, EZ_UINT64, EZ_FLOAT, EZ_DOUBLE, EZ_TEXT, EZ_FILE, EZ_DIR, EZ_OUTPUT };
+  static const std::string EZ_TYPE_NAME[] = {"NOTYPE", "bool", "char", "unsigned char", "short", "unsigned short", "int", "unsigned int", "long", "unsigned long", "float", "double", "string", "file", "directory", "output"};
 static const char delim = ',';
+
 /**
 * @brief 拆分字符串
 * @param s 输入字串
@@ -58,7 +60,6 @@ static void SplitDelim( const std::string &s, const char token, \
 {
   std::stringstream ss( s );
   std::string item;
-
   while( std::getline( ss, item, token ) ) {
     result.push_back( item );
   }
@@ -69,8 +70,8 @@ static void SplitDelim( const std::string &s, const char token, \
 */
 static bool CheckFileExistence( const std::string &name )
 {
-  struct stat buffer;
-  return (stat(name.c_str(),&buffer) == 0);
+	  std::ifstream f(name.c_str());
+	  return f.good();
 };
 /**
 * @brief 检查文件是否存在
@@ -79,7 +80,6 @@ static bool CheckFileExistence( const std::string &name )
 static bool CheckDirExistence( const char *path )
 {
   struct stat info;
-
   if( stat( path, &info ) != 0 ) {
     return false;
   } else if( info.st_mode & S_IFDIR ) {
@@ -91,7 +91,8 @@ static bool CheckDirExistence( const char *path )
 /**
 * @brief 参数类
 */
-class OptionGroup {
+  class OptionGroup
+  {
 public:
   OptionGroup() : expectArgs( 0 ), \
                   isRequired( false ), \
@@ -100,7 +101,6 @@ public:
                   optType( EZ_NOTYPE ), \
                   isUnlabeled( false ), \
                   groupID( 0 ) { }
-  ~OptionGroup() {};
   std::string defaults;  /** @brief 默认值  */
   int expectArgs;  /** @brief 期望参数个数  */
   std::string help;  /** @brief 参数说明  */
@@ -117,6 +117,237 @@ public:
   bool isUnlabeled;  /** @brief 是否为无标签参数(如input,output等不带前导符的参数)  */
   int groupID;
   bool needSplit; /**text是否需要根据逗号分隔,一般需要分割,如果传入wkt等完整子串则设置为false*/
+    size_t validIndex = 0; /**被选中的valid value*/
+    double minValid;
+    double maxValid;
+    void *scalaValues = NULL;
+    ~OptionGroup()
+    {
+      if (scalaValues) {
+        switch (optType) {
+        case ez::EZ_BOOL: {
+          bool *values = (bool *)scalaValues;
+          delete values;
+        }
+        break;
+        case ez::EZ_INT8: {
+          char *values = (char *)scalaValues;
+          delete values;
+        }
+        break;
+        case ez::EZ_UINT8: {
+          unsigned char *values = (unsigned char *)scalaValues;
+          delete values;
+        }
+        break;
+        case ez::EZ_INT16: {
+          short *values = (short *)scalaValues;
+          delete values;
+        }
+        break;
+        case ez::EZ_UINT16: {
+          unsigned short *values = (unsigned short *)scalaValues;
+          delete values;
+        }
+        break;
+        case ez::EZ_INT32: {
+          int *values = (int *)scalaValues;
+          delete values;
+        }
+        break;
+        case ez::EZ_UINT32: {
+          unsigned int *values = (unsigned int *)scalaValues;
+          delete values;
+        }
+        break;
+        case ez::EZ_INT64: {
+          long *values = (long *)scalaValues;
+          delete values;
+        }
+        break;
+        case ez::EZ_UINT64: {
+          unsigned long *values = (unsigned long *)scalaValues;
+          delete values;
+        }
+        break;
+        case ez::EZ_FLOAT: {
+          float *values = (float *)scalaValues;
+          delete values;
+        }
+        break;
+        case ez::EZ_DOUBLE: {
+          double *values = (double *)scalaValues;
+          delete values;
+        }
+        break;
+        default:
+          break;
+        }
+        scalaValues = NULL;
+      };
+    }
+    /**
+    * @brief 获取默认参数
+    * @param i index
+    * @param out 输出参数值
+    */
+    inline void getScalaValue(int i, std::string &out)
+    {
+      if (i >= expectArgs)
+        return;
+      std::stringstream ss;
+      switch (optType) {
+      case ez::EZ_BOOL: {
+        bool *values = (bool *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      case ez::EZ_INT8: {
+        char *values = (char *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      case ez::EZ_UINT8: {
+        unsigned char *values = (unsigned char *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      case ez::EZ_INT16: {
+        short *values = (short *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      case ez::EZ_UINT16: {
+        unsigned short *values = (unsigned short *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      case ez::EZ_INT32: {
+        int *values = (int *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      case ez::EZ_UINT32: {
+        unsigned int *values = (unsigned int *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      case ez::EZ_INT64: {
+        long *values = (long *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      case ez::EZ_UINT64: {
+        unsigned long *values = (unsigned long *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      case ez::EZ_FLOAT: {
+        float *values = (float *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      case ez::EZ_DOUBLE: {
+        double *values = (double *)scalaValues;
+        ss << values[i];
+        ss >> out;
+      }
+      break;
+      default:
+        break;
+      }
+    }
+    /**
+    * @brief 获取默认参数
+    * @param i index
+    * @param out 输入参数值
+    */
+    inline void setScalaValue(int i, std::string in)
+    {
+      if (i >= expectArgs)
+        return;
+      std::stringstream ss;
+      switch (optType) {
+      case ez::EZ_BOOL: {
+        bool *values = (bool *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      case ez::EZ_INT8: {
+        char *values = (char *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      case ez::EZ_UINT8: {
+        unsigned char *values = (unsigned char *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      case ez::EZ_INT16: {
+        short *values = (short *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      case ez::EZ_UINT16: {
+        unsigned short *values = (unsigned short *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      case ez::EZ_INT32: {
+        int *values = (int *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      case ez::EZ_UINT32: {
+        unsigned int *values = (unsigned int *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      case ez::EZ_INT64: {
+        long *values = (long *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      case ez::EZ_UINT64: {
+        unsigned long *values = (unsigned long *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      case ez::EZ_FLOAT: {
+        float *values = (float *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      case ez::EZ_DOUBLE: {
+        double *values = (double *)scalaValues;
+        ss << in;
+        ss >> values[i];
+      }
+      break;
+      default:
+        break;
+      }
+    }
   /**
   * @brief 获取参数
   * @param out 输出参数值
@@ -124,7 +355,6 @@ public:
   inline void get( std::string &out )
   {
     std::stringstream ss;
-
     if( !isSet ) {
       if( defaults.empty() ) {
         ss << "";
@@ -151,7 +381,6 @@ public:
   inline void get( T &out )
   {
     std::stringstream ss;
-
     if( !isSet ) {
       if( defaults.empty() ) {
         ss << "";
@@ -178,12 +407,10 @@ public:
   inline void getVector( std::vector<T> &out )
   {
     std::stringstream ss;
-
     if( !isSet ) {
       if( !defaults.empty() ) {
         std::vector< std::string > strings;
         SplitDelim( defaults, delim, strings );
-
         for( int i = 0; i < ( long int )strings.size(); ++i ) {
           ss << strings[i];
           T temp;
@@ -214,16 +441,13 @@ public:
   inline void getMultiVector( std::vector< std::vector<T> > &out )
   {
     std::stringstream ss;
-
     if( !isSet ) {
       if( !defaults.empty() ) {
         std::vector< std::string > strings;
         SplitDelim( defaults, delim, strings );
-
         if( out.size() < 1 ) {
           out.resize( 1 );
         }
-
         for( int i = 0; i < ( long int )strings.size(); ++i ) {
           ss << strings[i];
           T temp;
@@ -236,11 +460,9 @@ public:
     } else {
       if( !args.empty() ) {
         int n = args.size();
-
         if( ( long int )out.size() < n ) {
           out.resize( n );
         }
-
         for( int i = 0; i < n; ++i ) {
           for( int j = 0; j < ( long int )args[i].size(); ++j ) {
             ss << args[i].at( j );
@@ -269,67 +491,55 @@ public:
           bool example = true;
           return validate( example, badOptions );
         }
-
         case EZ_INT8: {
           char example = 0;
           return validate( example, badOptions );
         }
-
         case EZ_UINT8: {
           unsigned char example = 0;
           return validate( example, badOptions );
         }
-
         case EZ_INT16: {
           short example = 0;
           return validate( example, badOptions );
         }
-
         case EZ_UINT16: {
           unsigned short example = 0;
           return validate( example, badOptions );
         }
-
         case EZ_INT32: {
           int example = 0;
           return validate( example, badOptions );
         }
-
         case EZ_UINT32: {
           unsigned int example = 0;
           return validate( example, badOptions );
         }
-
         case EZ_INT64: {
           long example = 0;
           return validate( example, badOptions );
         }
-
         case EZ_UINT64: {
           unsigned long example = 0;
           return validate( example, badOptions );
         }
-
         case EZ_FLOAT: {
           float example = 0;
           return validate( example, badOptions );
         }
-
         case EZ_DOUBLE: {
           double example = 0;
           return validate( example, badOptions );
         }
-
-        case EZ_TEXT: {
+        case EZ_TEXT:
+        case EZ_OUTPUT: {
           std::string example = "";
           return validate( example, badOptions );
         }
-
         case EZ_FILE: {
           for( int i = 0; i < ( int )args.size(); ++i ) {
             for( int j = 0; j < ( int )args[i].size(); ++j ) {
               std::string arg = args[i].at( j );
-
               if( !CheckFileExistence( arg ) ) {
                 badOptions.push_back( args[i].at( j ) );
               }
@@ -337,12 +547,10 @@ public:
           }
           break;
         }
-
         case EZ_DIR: {
           for( int i = 0; i < ( int )args.size(); ++i ) {
             for( int j = 0; j < ( int )args[i].size(); ++j ) {
               std::string arg = args[i].at( j );
-
               if( !CheckDirExistence( arg.c_str() ) ) {
                 badOptions.push_back( args[i].at( j ) );
               }
@@ -350,16 +558,48 @@ public:
           }
           break;
         }
-
         case EZ_NOTYPE:
         default:
           break;
       }
     }
-
     return badOptions.empty();
   };
-private:
+    template<typename T>
+    inline bool getMinMax(T example)
+    {
+      std::stringstream ss;
+      /*check range*/
+      T mint = example, maxt = example;
+      if (!minValue.empty()) {
+        ss << minValue;
+        ss >> mint;
+        ss.str("");
+        ss.clear();
+      } else {
+        mint = (std::numeric_limits<T>::lowest )();
+      }
+      if (!maxValue.empty()) {
+        ss << maxValue;
+        ss >> maxt;
+        ss.str("");
+        ss.clear();
+      } else {
+        maxt = (std::numeric_limits<T>::max)();
+      }
+      ss << mint;
+      ss >> minValid;
+      ss.str("");
+      ss.clear();
+      ss.str("");
+      ss << maxt;
+      ss >> maxValid;
+      ss.str("");
+      ss.clear();
+      ss.str("");
+      return true;
+    };
+  protected:
   /**
   * @brief 验证参数是否正确,仅内部调用
   * @param example 数据类型示例，用于判断类型最大最小值
@@ -371,41 +611,8 @@ private:
                         std::vector<std::string> &badOptions )
   {
     std::stringstream ss;
-
     if( validValues.size() == 0 ) {
-      /*check range*/
-      T mint = example, maxt = example;
-
-      if( !minValue.empty() ) {
-        ss << minValue;
-        ss >> mint;
-        ss.str( "" );
-        ss.clear();
-      } else {
-        mint = (std::numeric_limits<T>::min)();
-      }
-
-      if( !maxValue.empty() ) {
-        ss << maxValue;
-        ss >> maxt;
-        ss.str( "" );
-        ss.clear();
-      } else {
-        maxt = (std::numeric_limits<T>::max)();
-      }
-
-      double min, max;
-      ss << mint;
-      ss >> min;
-      ss.str( "" );
-      ss.clear();
-      ss.str( "" );
-      ss << maxt;
-      ss >> max;
-      ss.str( "" );
-      ss.clear();
-      ss.str( "" );
-
+        getMinMax(example);
       /*iterates all arguments*/
       for( int i = 0; i < ( int )args.size(); ++i ) {
         for( int j = 0; j < ( int )args[i].size(); ++j ) {
@@ -415,8 +622,7 @@ private:
           ss.str( "" );
           ss.clear();
           ss.str( "" );
-
-          if( value > max || value < min ) {
+            if( value > maxValid || value < minValid ) {
             badOptions.push_back( args[i].at( j ) );
           }
         }
@@ -426,14 +632,12 @@ private:
       for( int i = 0; i < ( int )args.size(); ++i ) {
         for( int j = 0; j < ( int )args[i].size(); ++j ) {
           std::string arg = args[i].at( j );
-
           if( std::find( validValues.begin(), validValues.end(), arg ) == validValues.end() ) {
             badOptions.push_back( args[i].at( j ) );
           }
         }
       }
     }
-
     return badOptions.empty();
   };
 };
@@ -441,14 +645,21 @@ private:
 /**
 * @brief 参数解析类
 */
-class OptionParser {
+  class OptionParser
+  {
 public:
   OptionParser(): unlabeledNumber( 0 ), xorGroupNum( 0 )
   {
     /* 添加help参数*/
     add( "-h,--help,--usage", false, 0, "Print this usage message" );
   };
-  inline ~OptionParser() {};
+    inline ~OptionParser()
+    {
+      for (auto it = groups.begin(); it != groups.end(); ++it) {
+        delete (*it);
+      }
+      this->groups.clear();
+    };
   /**
   * @brief 添加参数
   * @param flags 参数标识,可有多个,get时使用,用逗号分隔
@@ -467,7 +678,7 @@ public:
   * @param maxValue 最大值,若不需要则为""
   * @param validListStr 有效值列表,设置后最大最小值无效,用逗号分隔,可以是数字或者单词,不需要则不指定或为""
   */
-  inline void add( const char *flags,
+    inline virtual void add( const char *flags,
                    bool required = true,
                    int expectArgs = 1, 
                    const char *help = "", 
@@ -478,81 +689,124 @@ public:
                    const  char *validListStr = "")
   {
     int id = this->groups.size();
-    OptionGroup g;
-    g.defaults = defaults;
-    g.isRequired = required;
-    g.expectArgs = expectArgs;
-    g.isSet = 0;
-    g.needSplit = expectArgs <=1 ? false:true;
-
+      OptionGroup *g = new OptionGroup;
+      g->defaults = defaults;
+      std::stringstream ss;
+      std::vector<std::string> defaultList;
+      SplitDelim(defaults, ',', defaultList);
+      g->isRequired = required;
+      g->expectArgs = expectArgs;
+      g->isSet = 0;
+      g->needSplit = expectArgs == 1 ? false : true;
+      g->help.append( help );
     if( optType != EZ_NOTYPE ) {
-      g.help.append( "[" ).append( EZ_TYPE_NAME[optType] ).append( "]" );
+        g->help.append("[").append(EZ_TYPE_NAME[optType]).append("]");
     }
-
-    g.help.append( help );
     std::vector<std::string> flagsVector;
     SplitDelim( flags, delim, flagsVector );
-    g.flags = flagsVector;
-    g.optType = optType;
-    g.minValue = minValue;
-    g.maxValue = maxValue;
+      g->flags = flagsVector;
+      g->optType = optType;
+      g->minValue = minValue;
+      g->maxValue = maxValue;
     std::vector<std::string> validList;
     SplitDelim( validListStr, delim, validList );
-    g.validValues = validList;
-
-    if( optType == EZ_TEXT && validList.size() > 0 ) {
-      g.needValidate = true;
-    } else if( optType != EZ_TEXT && optType != EZ_NOTYPE ) {
-      g.needValidate = true;
+      g->validValues = validList;
+      if( optType == EZ_TEXT && optType == EZ_OUTPUT && validList.size() > 0 ) {
+        g->needValidate = true;
+      } else if( optType != EZ_TEXT && optType != EZ_OUTPUT && optType != EZ_NOTYPE ) {
+        g->needValidate = true;
     }
-
     if( flagsVector[0].substr( 0, 1 ) != "-" ) {
       /*reset some properties*/
-      g.isUnlabeled = true;
-      g.isRequired = true;/*option must be set if defined as unlabeled*/
+        g->isUnlabeled = true;
+        g->isRequired = true;/*option must be set if defined as unlabeled*/
       unlabeledPos.insert( std::pair<int , std::string> ( unlabeledNumber, flagsVector[0] ) );
       unlabeledNumber++;
-      g.argsFormat.append( "(" );
+        g->argsFormat.append( "(" );
     }
-
-    if( g.expectArgs == 0 ) {
-      g.argsFormat.append( " " );
-    } else if( g.expectArgs == -1 ) {
-      g.argsFormat.append( " Arg0,[ArgN] " );
-    } else if( g.expectArgs == 1 ) {
-      if( g.validValues.size() == 0 ) {
-        g.argsFormat.append( " Arg " );
+      if( g->expectArgs == 0 ) {
+        g->argsFormat.append( " " );
+      } else if( g->expectArgs == -1 ) {
+        g->argsFormat.append( " Arg0,[ArgN] " );
+      } else if( g->expectArgs == 1 ) {
+        if( g->validValues.size() == 0 ) {
+          g->argsFormat.append( " Arg " );
       } else {
-        g.argsFormat.append( " " );
-
-        for( int k = 0; k < ( int )g.validValues.size(); ++k ) {
-          g.argsFormat.append( g.validValues[k] ).append( "|" );
+          g->argsFormat.append( " " );
+          for( int k = 0; k < ( int )g->validValues.size(); ++k ) {
+            g->argsFormat.append( g->validValues[k] ).append( "|" );
         }
       }
     } else {
-      std::stringstream ss;
-      g.argsFormat.append( " " );
-
-      for( int i = 0; i < g.expectArgs; i++ ) {
+        g->argsFormat.append( " " );
+        for( int i = 0; i < g->expectArgs; i++ ) {
         std::string argstr;
         ss << i;
         ss >> argstr;
         ss.str( "" );
         ss.clear();
-        g.argsFormat.append( "Arg" ).append( argstr ).append( "," );
+          ss.str("");
+          g->argsFormat.append( "Arg" ).append( argstr ).append( "," );
       }
     }
-
-    g.argsFormat.erase( g.argsFormat.size() - 1 );
-
-    if( g.isUnlabeled ) {
-      g.argsFormat.append( " )" );
+      g->argsFormat.erase( g->argsFormat.size() - 1 );
+      if( g->isUnlabeled ) {
+        g->argsFormat.append( " )" );
     }
-
     for( int i = 0; i < ( int )flagsVector.size(); ++i ) {
       this->optionGroupIds[flagsVector[i]] = id;
     }
-
+      if (expectArgs > 0) {
+        do {
+          switch (optType) {
+          case ez::EZ_BOOL:
+            g->scalaValues = new bool[expectArgs];
+            break;
+          case ez::EZ_INT8:
+            g->scalaValues = new char[expectArgs];
+            break;
+          case ez::EZ_UINT8:
+            g->scalaValues = new unsigned char[expectArgs];
+            break;
+          case ez::EZ_INT16:
+            g->scalaValues = new short[expectArgs];
+            break;
+          case ez::EZ_UINT16:
+            g->scalaValues = new unsigned short[expectArgs];
+            break;
+          case ez::EZ_INT32:
+            g->scalaValues = new int[expectArgs];
+            break;
+          case ez::EZ_UINT32:
+            g->scalaValues = new unsigned int[expectArgs];
+            break;
+          case ez::EZ_INT64:
+            g->scalaValues = new long[expectArgs];
+            break;
+          case ez::EZ_UINT64:
+            g->scalaValues = new unsigned long[expectArgs];
+            break;
+          case ez::EZ_FLOAT:
+            g->scalaValues = new float[expectArgs];
+            break;
+          case ez::EZ_DOUBLE:
+            g->scalaValues = new double[expectArgs];
+            break;
+          default:
+            break;
+          }
+          if (!g->scalaValues)
+            break;
+          for (size_t i = 0; i < expectArgs; ++i) {
+            if (i >= defaultList.size()) {
+              g->setScalaValue(i, "0");
+              continue;
+            }
+            double value;
+            g->setScalaValue(i, defaultList[i]);
+          }
+        } while (0);
+      }
     this->groups.push_back( g );
   };
   /**
@@ -564,11 +818,10 @@ public:
     xorGroupNum++;
     std::vector<std::string> list;
     SplitDelim( xorlistStr, delim, list );
-
     for( unsigned int i = 0; i < list.size(); i++ ) {
       if( optionGroupIds.count( list[i] ) ) {
         int Id = optionGroupIds[list[i]];
-        groups[Id].groupID = xorGroupNum;
+          groups[Id]->groupID = xorGroupNum;
         xorGroups[xorGroupNum].push_back( Id );
       }
     }
@@ -578,13 +831,12 @@ public:
   * @param name 参数标识名
   * @return 参数
   */
-  inline OptionGroup get( const char *name )
+    inline OptionGroup *get( const char *name )
   {
     if( optionGroupIds.count( name ) ) {
       return groups[optionGroupIds[name]];
     }
-
-    return OptionGroup();
+      return new OptionGroup();
   };
   /**
   * @brief 获取使用说明
@@ -598,81 +850,63 @@ public:
          .append( "\n\n" )\
          .append( "USAGE: \n\n    " );
     int i, j;
-
     if( syntax.empty() ) {
       syntax.append( _progName ).append( " " );
       std::vector<std::string> xorGroupUsage;
-
       for( i = 0; i < xorGroupNum; i++ ) {
         xorGroupUsage.push_back( "" );
       }
-
       for( i = 0; i < ( int )groups.size(); i++ ) {
-        OptionGroup g = groups[i];
+          OptionGroup *g = groups[i];
         std::string opt = "";
-
-        if( g.groupID == 0 ) {
+          if( g->groupID == 0 ) {
           /*no xor*/
-          if( !g.isRequired ) {
+            if( !g->isRequired ) {
             opt = "[";
           }
-
-          opt.append( g.flags[0] ).append( g.argsFormat );
-
-          if( !g.isRequired ) {
+            opt.append( g->flags[0] ).append( g->argsFormat );
+            if( !g->isRequired ) {
             opt.append( "]" );
           }
-
           opt.append( " " );
         } else {
-          int groupID = g.groupID;
-
+            int groupID = g->groupID;
           if( xorGroupUsage[groupID - 1].empty() ) {
             xorGroupUsage[groupID - 1].append( " [" );
           }
-
-          xorGroupUsage[groupID - 1].append( g.flags[0] )\
-                                    .append( g.argsFormat )\
+            xorGroupUsage[groupID - 1].append( g->flags[0] )\
+            .append( g->argsFormat )\
                                     .append( " | " );
         }
-
         syntax.append( opt );
       }
-
       for( i = 0; i < xorGroupNum; i++ ) {
         xorGroupUsage[i].erase( xorGroupUsage[i].size() - 3 );
         xorGroupUsage[i].append( "] " );
         syntax.append( xorGroupUsage[i] );
       }
     }
-
     usage.append( syntax ).append( "\n\nOPTIONS:\n\n" );
-
     for( i = 0; i < ( int )groups.size(); i++ ) {
-      OptionGroup g = groups[i];
+        OptionGroup *g = groups[i];
       usage.append( "    " );
       std::string flags;
-
-      for( j = 0; j < ( int )g.flags.size(); ++j ) {
-        flags.append( g.flags[j] ).append( " " );
+        for( j = 0; j < ( int )g->flags.size(); ++j ) {
+          flags.append( g->flags[j] ).append( " " );
       }
-
       usage.append( flags )\
-           .append( g.argsFormat )\
+        .append( g->argsFormat )\
            .append( ":\n" )\
            .append( "        " )\
-           .append( g.help )\
+        .append( g->help )\
            .append( "\n" );
     }
-
     if( !example.empty() ) {
       usage.append( "\n\nEXAMPLES:\n\n    " ).append( example );
     }
-
     if( !footer.empty() ) {
       usage.append( "\n\nNotes:\n\n    " ).append( footer ).append( "\n" );
     }
-
     return usage;
   };
   /**
@@ -683,65 +917,52 @@ public:
   inline int isSet( const char *name )
   {
     std::string sname( name );
-
     if( this->optionGroupIds.count( sname ) ) {
-      return this->groups[this->optionGroupIds[sname]].isSet;
+        return this->groups[this->optionGroupIds[sname]]->isSet;
     }
-
     return 0;
   };
   /**
   * @brief 解析参数,直接将argc argv传入
   */
-  inline bool parse( int argc, const char *const *argv )
+    inline virtual bool parse( int argc, const char *const *argv )
   {
     if( argc < 1 ) {
       std::cout << "Invalid optoin number" << std::endl;
       return false;
     }
-
     std::vector<std::string> args;
     int i, j, Id, unlabel = 0;
-
     for( i = 0; i < ( int )argc; i++ ) {
       args.push_back( argv[i] );
     }
-
     _progName = args.front();
     args.erase( args.begin() );
     std::string s;
-
     for( i = 0; i < ( int ) args.size(); i++ ) {
       s = args[i];
-
       if( s.substr( 0, 1 ) == "-" && s.substr( 0, 2 ) != "--" ) {
         /*args with - , maybe combined*/
         s = s.substr( 1 );
         int length = s.size();
-
         for( j = 0; j < length; ++j ) {
           std::string letter = s.substr( j, 1 );
           letter = "-" + letter;
-
           if( optionGroupIds.count( letter ) ) {
             Id = optionGroupIds[letter];
-            groups[Id].isSet = 1;
-
-            if( groups[Id].expectArgs ) {
+              groups[Id]->isSet = 1;
+              if( groups[Id]->expectArgs ) {
               ++i;
-
               if( i >= ( int )args.size() ) {
                 break;
               }
-
               std::vector<std::string> argOptions;
-              if(groups[Id].needSplit)
+                if(groups[Id]->needSplit)
                 SplitDelim( args[i], delim, argOptions );
-              else
-              {
+                else {
                 argOptions.push_back(args[i]);
               }
-              groups[Id].args.push_back( argOptions );
+                groups[Id]->args.push_back( argOptions );
             }
           } else if( std::find( unknownOptions.begin(), \
                                 unknownOptions.end(), \
@@ -753,18 +974,15 @@ public:
         /*long name single option*/
         if( optionGroupIds.count( s ) ) {
           Id = optionGroupIds[s];
-          groups[Id].isSet = 1;
-
-          if( groups[Id].expectArgs ) {
+            groups[Id]->isSet = 1;
+            if( groups[Id]->expectArgs ) {
             ++i;
-
             if( i >= ( int )args.size() ) {
               break;
             }
-
             std::vector<std::string> argOptions;
             SplitDelim( args[i], delim, argOptions );
-            groups[Id].args.push_back( argOptions );
+              groups[Id]->args.push_back( argOptions );
           }
         } else if( std::find( unknownOptions.begin(), \
                               unknownOptions.end(), \
@@ -775,15 +993,13 @@ public:
         /*unlabeled OptionGroup*/
         if( unlabeledPos.count( unlabel ) ) {
           s = unlabeledPos[unlabel];
-
           if( optionGroupIds.count( s ) ) {
             Id = optionGroupIds[s];
-            groups[Id].isSet = 1;
+              groups[Id]->isSet = 1;
             std::vector<std::string> argOptions;
             SplitDelim( args[i], delim, argOptions );
-            groups[Id].args.push_back( argOptions );
+              groups[Id]->args.push_back( argOptions );
           }
-
           unlabel++;
         } else if( std::find( unknownOptions.begin(), \
                               unknownOptions.end(), \
@@ -792,17 +1008,14 @@ public:
         }
       }
     }
-
     if( isSet( "-h" ) ) {
       std::cout << getUsage() << std::endl;
       return false;
     }
-
     if( !checkValid( this->errors ) ) {
       std::cout << this->errors << std::endl;
       return false;
     }
-
     //显示警告
     std::cout << this->errors << std::endl;
     return true;
@@ -813,82 +1026,70 @@ public:
   * @param out 输出提示信息
   * @return 输入参数格式是否正确
   */
-  inline bool checkValid( std::string &out )
+    inline virtual bool checkValid( std::string &out )
   {
     int i, j;
     bool isValid = true;
-
     /*check required*/
     for( i = 0; i < ( int )groups.size(); ++i ) {
-      if( groups[i].isRequired && !groups[i].isSet ) {
+        if( groups[i]->isRequired && !groups[i]->isSet ) {
         out.append( "ERROR: Argument " )\
-           .append( groups[i].flags[0] ).append( " must be set.\n" );
+          .append( groups[i]->flags[0] ).append( " must be set.\n" );
         isValid = false;
       }
     }
-
     /*check expectArgs*/
     for( i = 0; i < ( int )groups.size(); ++i ) {
-      OptionGroup g = groups[i];
-
-      if( g.isSet ) {
-        if( g.expectArgs != 0 && g.args.empty() ) {
+        OptionGroup *g = groups[i];
+        if( g->isSet ) {
+          if( g->expectArgs != 0 && g->args.empty() ) {
           out.append( "ERROR: Got unexpected number of arguments for option " ) \
-             .append( g.flags[0] ).append( ".\n" );
+            .append( g->flags[0] ).append( ".\n" );
           isValid = false;
           continue;
         }
-
-        for( j = 0; j < ( int )g.args.size(); ++j ) {
-          if( ( g.expectArgs != -1 && g.expectArgs != ( int )g.args[j].size() )
-              || ( g.expectArgs == -1 && g.args[j].size() == 0 ) ) {
+          for( j = 0; j < ( int )g->args.size(); ++j ) {
+            if( ( g->expectArgs != -1 && g->expectArgs != ( int )g->args[j].size() )
+                || ( g->expectArgs == -1 && g->args[j].size() == 0 ) ) {
             out.append( "ERROR: Got unexpected number of arguments for option " ) \
-               .append( g.flags[0] ).append( ".\n" );
+              .append( g->flags[0] ).append( ".\n" );
             isValid = false;
           }
         }
       }
     }
-
     /*check arguments validation*/
     std::vector<std::string> tempOptions;
-
     for( i = 0; i < ( int )groups.size(); ++i ) {
-      if( !groups[i].validate( tempOptions ) ) {
+        if( !groups[i]->validate( tempOptions ) ) {
         for( j = 0; j < ( int )tempOptions.size(); ++j ) {
           out.append( "ERROR: Got invalid argument \"" ) \
              .append( tempOptions[j] ).append( "\" for option " ) \
-             .append( groups[i].flags[0] ).append( ".\n" );
+            .append( groups[i]->flags[0] ).append( ".\n" );
           isValid = false;
         }
       }
-
       tempOptions.clear();
     }
-
     /*check xor groups*/
-
     for( std::map<int, std::vector<int> >::iterator it =
            xorGroups.begin(); it != xorGroups.end(); ++it ) {
       std::vector<int> xorIDs = it->second;
       std::string xorstr;
       int xorNum = 0;
-
       for( i = 0; i < ( int )xorIDs.size(); i++ ) {
-        if( groups[xorIDs[i]].isSet ) {
+          if( groups[xorIDs[i]]->isSet ) {
           xorstr.append( " \"" ) \
-                .append( groups[xorIDs[i]].flags[0] ).append( "\" " );
+            .append( groups[xorIDs[i]]->flags[0] ).append( "\" " );
           xorNum++;
         }
       }
-
       if( xorNum > 1 ) {
         out.append( "ERROR:Can't set xor options at the same time:" ) \
            .append( xorstr ).append( "\n" );
         isValid  = false;
       }
     }
-
     /*print unknown OPTIONS*/
     if( ( int )unknownOptions.size() > 0 ) {
       for( i = 0; i < ( int )unknownOptions.size(); ++i ) {
@@ -896,12 +1097,10 @@ public:
            .append( unknownOptions[i] ).append( ".\n" );
       }
     }
-
     /*return out*/
     if( !out.empty() && !isValid ) {
       out.append( "\n" ).append( getUsage() );
     }
-
     return isValid;
   };
   /**
@@ -919,13 +1118,13 @@ public:
   std::string syntax;
   std::string example;  /** @brief 示例  */
   std::string footer;  /** @brief 脚注，说明license、作者等信息  */
-private:
+  protected:
   int unlabeledNumber;
   std::string _progName;  /** @brief 工具名称，直接从argv中解析得到  */
   /*members*/
   /** @brief 参数标签哈希 key=>参数 value=>id   */
   std::map< std::string, int > optionGroupIds;
-  std::vector<OptionGroup> groups;  /** @brief 参数组  */
+    std::vector<OptionGroup *> groups; /** @brief 参数组  */
   /** @brief 互斥参数组哈希,key=>groupID,value=>参数ID列表  */
   std::map<int , std::vector<int> > xorGroups;
   std::vector<std::string> unknownOptions;  /** @brief 无标签参数组  */
